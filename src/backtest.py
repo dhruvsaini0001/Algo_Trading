@@ -6,48 +6,61 @@ from backtesting.test import SMA
 from backtesting.lib import crossover
 from ingestion import fetch_data
 
+# Output folder for logs
 OUTPUT_FOLDER = "trade_logs"
 os.makedirs(OUTPUT_FOLDER, exist_ok=True)
 
-class MyStrategy(Strategy):
 
+class MyStrategy(Strategy):
     def init(self):
-        # indicator setup
         close = pd.Series(self.data.Close, index=self.data.index)
         self.rsi = self.I(ta.rsi, close, length=14)
-        self.sma1 = self.I(SMA, close, 20)
-        self.sma2 = self.I(SMA, close, 50)
+        self.sma20 = self.I(SMA, close, 20)
+        self.sma50 = self.I(SMA, close, 50)
 
     def next(self):
-        # trade logic
-        if pd.isna(self.rsi[-1]):
+        if pd.isna(self.rsi[-1]) or pd.isna(self.sma20[-1]) or pd.isna(self.sma50[-1]):
             return
 
-        if crossover(self.sma1, self.sma2):
-            print("BUY ...")
+        # Buy condition: RSI < 30 and SMA20 crosses above SMA50
+        if self.rsi[-1] < 30 and crossover(self.sma20, self.sma50):
+            print(f"BUY -> Date: {self.data.index[-1]} | RSI: {self.rsi[-1]:.2f}")
             self.buy()
-        elif self.position.is_long and crossover(self.sma2, self.sma1):
-            print("SELL ...")
+
+        # Sell condition: SMA20 crosses below SMA50
+        elif self.position.is_long and crossover(self.sma50, self.sma20):
+            print(f"SELL -> Date: {self.data.index[-1]}")
             self.position.close()
 
 
-def run_and_optimize(ticker):
+def run_and_log(ticker):
+    print(f"\n🚀 Running backtest for {ticker}")
     df = fetch_data(ticker, "2020-01-01", "2025-06-20")
+
+    # Ensure correct format
+    df = df.rename(columns={"Date": "datetime"})
+    df = df[["datetime", "Open", "High", "Low", "Close", "Volume"]]
+    df["datetime"] = pd.to_datetime(df["datetime"])
+    df.set_index("datetime", inplace=True)
+
     bt = Backtest(df, MyStrategy, cash=10000, commission=0.002, exclusive_orders=True)
     stats = bt.run()
-    print(f"\n*** {ticker} Base Stats ***\n{stats}")
+    print(f"\n📊 {ticker} Performance Summary:\n{stats}")
 
-    trades = stats._trades.copy()
-    filename = f"{OUTPUT_FOLDER}/{ticker}_trade_log.csv"
-    trades.to_csv(filename, index=False)
-    print(f"✅ Trade log saved: {filename}")
+    # Save trade log
+    trades = stats._trades
+    log_path = os.path.join(OUTPUT_FOLDER, f"{ticker}_trade_log.csv")
+    trades.to_csv(log_path, index=False)
+    print(f"✅ Saved trade log: {log_path}")
+    return stats, trades
 
-    # Optional optimize()
-    # ...
+
 
 def main():
-    for t in ["RELIANCE.NS", "TCS.NS", "INFY.NS"]:
-        run_and_optimize(t)
+    tickers = ["RELIANCE.NS", "TCS.NS", "INFY.NS"]
+    for ticker in tickers:
+        run_and_log(ticker)
+
 
 if __name__ == "__main__":
     main()

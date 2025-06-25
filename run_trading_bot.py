@@ -1,11 +1,13 @@
-# run_trading_bot.py
-
 import os
 import sys
 import pandas as pd
 import numpy as np
 import math
 import json
+import pandas_ta as ta
+from backtesting import Backtest, Strategy
+from backtesting.test import SMA
+from backtesting.lib import crossover
 
 # Add 'src' folder to sys.path
 sys.path.append(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'src'))
@@ -15,14 +17,12 @@ from simple_strategy import get_signals_for_tickers
 from sheets_logger import log_to_named_sheet
 from ml_model import fetch_and_prepare, train_model
 
+# Create logs folder for backtest results
+BACKTEST_LOG_DIR = "trade_logs"
+os.makedirs(BACKTEST_LOG_DIR, exist_ok=True)
+
 
 def sanitize_dataframe(df, debug=False):
-    """
-    Cleans a DataFrame to ensure it is JSON-serializable for Google Sheets.
-    - Converts NaN, inf, and extreme float values to None
-    - Formats timestamps
-    - Skips invalid rows during debug
-    """
     def clean_value(val):
         if isinstance(val, float):
             if np.isnan(val) or np.isinf(val) or abs(val) > 1e308:
@@ -36,7 +36,6 @@ def sanitize_dataframe(df, debug=False):
             return val.strftime("%Y-%m-%d %H:%M:%S")
         return val
 
-    # Apply cleaning logic
     cleaned_df = df.astype(object).applymap(clean_value)
 
     if debug:
@@ -45,16 +44,50 @@ def sanitize_dataframe(df, debug=False):
             try:
                 json.dumps(row.to_dict(), allow_nan=False)
                 valid_rows.append(row)
-            except ValueError as e:
-                print(f"\n❌ Invalid JSON in row {i}:")
-                print(row.to_dict())
+            except ValueError:
+                print(f"\n❌ Invalid JSON in row {i}:", row.to_dict())
         cleaned_df = pd.DataFrame(valid_rows)
 
     return cleaned_df.reset_index(drop=True)
 
 
+# --- Custom Strategy for Backtesting ---
+class MyStrategy(Strategy):
+    def init(self):
+        close = pd.Series(self.data.Close, index=self.data.index)
+        self.rsi = self.I(ta.rsi, close, length=14)
+        self.sma20 = self.I(SMA, close, 20)
+        self.sma50 = self.I(SMA, close, 50)
+
+    def next(self):
+        if pd.isna(self.rsi[-1]) or pd.isna(self.sma20[-1]) or pd.isna(self.sma50[-1]):
+            return
+        if self.rsi[-1] < 30 and crossover(self.sma20, self.sma50):
+            self.buy()
+        elif self.position.is_long and crossover(self.sma50, self.sma20):
+            self.position.close()
+
+
+def run_backtest(ticker):
+    print(f"\n📉 Backtesting {ticker}")
+    df = fetch_data(ticker, "2020-01-01", "2025-06-24")
+
+    df = df.rename(columns={"Date": "datetime"})
+    df = df[["datetime", "Open", "High", "Low", "Close", "Volume"]]
+    df["datetime"] = pd.to_datetime(df["datetime"])
+    df.set_index("datetime", inplace=True)
+
+    bt = Backtest(df, MyStrategy, cash=10000, commission=0.002, exclusive_orders=True)
+    stats = bt.run()
+    print(f"\n📊 {ticker} Backtest Summary:\n{stats}")
+
+    trades = stats._trades
+    trade_log_path = os.path.join(BACKTEST_LOG_DIR, f"{ticker}_trade_log.csv")
+    trades.to_csv(trade_log_path, index=False)
+    print(f"✅ Trade log saved to: {trade_log_path}")
+
+
 def main():
-    # --- Configuration ---
     tickers = ["RELIANCE.NS", "TCS.NS", "INFY.NS"]
     start_date = "2022-01-01"
     end_date = "2025-06-24"
@@ -102,8 +135,6 @@ def main():
     signal_df = get_signals_for_tickers(tickers, start_date, end_date, rsi_threshold=30)
     signal_df["Date"] = pd.to_datetime(signal_df["Date"]).dt.strftime("%Y-%m-%d")
     buy_signals = signal_df[signal_df["signal"] == 1][["Ticker", "Date", "Close", "RSI", "SMA20", "SMA50", "signal"]]
-
-    # Remove rows with NaNs in key indicator columns
     buy_signals = buy_signals.dropna(subset=["SMA20", "SMA50"])
 
     if not buy_signals.empty:
@@ -111,11 +142,15 @@ def main():
     else:
         print("⚠️ No Buy Signals found to log.")
 
-    # --- 6. Train ML Model for each ticker ---
+    # --- 6. Train ML Models ---
     for ticker in tickers:
         print(f"\n🔍 Training ML model for {ticker}...")
         df = fetch_and_prepare(ticker)
         train_model(df)
+
+    # --- 7. Run Backtests ---
+    for ticker in tickers:
+        run_backtest(ticker)
 
 
 if __name__ == "__main__":
