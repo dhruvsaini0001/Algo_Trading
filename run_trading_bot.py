@@ -15,6 +15,8 @@ from src.simple_strategy import get_signals_for_tickers
 from src.sheets_logger import log_to_named_sheet
 from src.ml_model import fetch_and_prepare, train_model ,predict_next_signal
 
+
+
 # Create logs folder for backtest results
 BACKTEST_LOG_DIR = "trade_logs"
 os.makedirs(BACKTEST_LOG_DIR, exist_ok=True)
@@ -43,7 +45,7 @@ def sanitize_dataframe(df, debug=False):
                 json.dumps(row.to_dict(), allow_nan=False)
                 valid_rows.append(row)
             except ValueError:
-                print(f"\n❌ Invalid JSON in row {i}:", row.to_dict())
+                print(f"\n Invalid JSON in row {i}:", row.to_dict())
         cleaned_df = pd.DataFrame(valid_rows)
 
     return cleaned_df.reset_index(drop=True)
