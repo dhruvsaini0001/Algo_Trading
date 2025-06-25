@@ -4,8 +4,10 @@ import os
 import sys
 import pandas as pd
 import numpy as np
+import math
+import json
 
-# Ensure the 'src' folder is accessible
+# Add 'src' folder to sys.path
 sys.path.append(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'src'))
 
 from ingestion import fetch_data
@@ -13,16 +15,17 @@ from simple_strategy import get_signals_for_tickers
 from sheets_logger import log_to_named_sheet
 from ml_model import fetch_and_prepare, train_model
 
-import math
-import json
 
 def sanitize_dataframe(df, debug=False):
     """
-    Ensures all values are JSON-serializable, safe for Google Sheets.
+    Cleans a DataFrame to ensure it is JSON-serializable for Google Sheets.
+    - Converts NaN, inf, and extreme float values to None
+    - Formats timestamps
+    - Skips invalid rows during debug
     """
     def clean_value(val):
         if isinstance(val, float):
-            if math.isnan(val) or math.isinf(val) or abs(val) > 1e308:
+            if np.isnan(val) or np.isinf(val) or abs(val) > 1e308:
                 return None
             return round(val, 4)
         elif isinstance(val, (np.integer, int)):
@@ -33,18 +36,22 @@ def sanitize_dataframe(df, debug=False):
             return val.strftime("%Y-%m-%d %H:%M:%S")
         return val
 
-    cleaned_df = df.applymap(clean_value)
+    # Apply cleaning logic
+    cleaned_df = df.astype(object).applymap(clean_value)
 
     if debug:
+        valid_rows = []
         for i, row in cleaned_df.iterrows():
             try:
                 json.dumps(row.to_dict(), allow_nan=False)
+                valid_rows.append(row)
             except ValueError as e:
-                print(f"\n Invalid JSON in row {i}:")
+                print(f"\n❌ Invalid JSON in row {i}:")
                 print(row.to_dict())
-                raise
+        cleaned_df = pd.DataFrame(valid_rows)
 
-    return cleaned_df
+    return cleaned_df.reset_index(drop=True)
+
 
 def main():
     # --- Configuration ---
@@ -95,8 +102,12 @@ def main():
     signal_df = get_signals_for_tickers(tickers, start_date, end_date, rsi_threshold=30)
     signal_df["Date"] = pd.to_datetime(signal_df["Date"]).dt.strftime("%Y-%m-%d")
     buy_signals = signal_df[signal_df["signal"] == 1][["Ticker", "Date", "Close", "RSI", "SMA20", "SMA50", "signal"]]
+
+    # Remove rows with NaNs in key indicator columns
+    buy_signals = buy_signals.dropna(subset=["SMA20", "SMA50"])
+
     if not buy_signals.empty:
-        log_to_named_sheet(sheet_name, signal_sheet, sanitize_dataframe(buy_signals), json_path)
+        log_to_named_sheet(sheet_name, signal_sheet, sanitize_dataframe(buy_signals, debug=True), json_path)
     else:
         print("⚠️ No Buy Signals found to log.")
 
@@ -105,6 +116,7 @@ def main():
         print(f"\n🔍 Training ML model for {ticker}...")
         df = fetch_and_prepare(ticker)
         train_model(df)
+
 
 if __name__ == "__main__":
     main()
