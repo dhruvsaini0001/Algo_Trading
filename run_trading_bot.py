@@ -9,13 +9,15 @@ from backtesting import Backtest, Strategy
 from backtesting.test import SMA
 from backtesting.lib import crossover
 
-# Add 'src' folder to sys.path
-sys.path.append(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'src'))
 
-from ingestion import fetch_data
-from simple_strategy import get_signals_for_tickers
-from sheets_logger import log_to_named_sheet
-from ml_model import fetch_and_prepare, train_model
+# Add 'src' folder to sys.path
+
+
+
+from src.ingestion import fetch_data
+from src.simple_strategy import get_signals_for_tickers
+from src.sheets_logger import log_to_named_sheet
+from src.ml_model import fetch_and_prepare, train_model ,predict_next_signal
 
 # Create logs folder for backtest results
 BACKTEST_LOG_DIR = "trade_logs"
@@ -141,12 +143,22 @@ def main():
         log_to_named_sheet(sheet_name, signal_sheet, sanitize_dataframe(buy_signals, debug=True), json_path)
     else:
         print("⚠️ No Buy Signals found to log.")
-
     # --- 6. Train ML Models ---
     for ticker in tickers:
         print(f"\n🔍 Training ML model for {ticker}...")
         df = fetch_and_prepare(ticker)
         train_model(df)
+
+    # --- 6.1 Predict Next Signal ---
+    for ticker in tickers:
+        print(f"\n🧠 Predicting next signal for {ticker} using ML model...")
+        try:
+            pred, prob = predict_next_signal(ticker)
+            signal_type = "📈 BUY" if pred == 1 else "📉 SELL/HOLD"
+            print(f"🔮 Prediction for {ticker}: {signal_type} (Confidence: {round(prob, 2)}%)")
+        except Exception as e:
+            print(f"❌ Prediction failed for {ticker}: {e}")
+
 
     # --- 7. Run Backtests ---
     for ticker in tickers:
