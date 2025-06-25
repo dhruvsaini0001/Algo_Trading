@@ -46,25 +46,23 @@ A Python-based modular algorithmic trading system that:
 
 ## 📁 Project Structure
 
-```
-
-.
+```.
 ├── app.py                        # Streamlit UI
-├── run\_trading\_bot.py           # Main script (scheduler, automation)
+├── run_trading_bot.py           # Main script (scheduler, automation)
 ├── requirements.txt             # Dependencies
 ├── README.md                    # Project documentation
-├── trade\_logs/                  # CSV logs of backtests
-├── final\_model/                 # Trained ML models and scalers
+├── trade_logs/                  # CSV logs of backtests
+├── final_model/                 # Trained ML models and scalers
 ├── src/
 │   ├── backtest.py              # RSI + SMA backtesting logic
 │   ├── ingestion.py             # Fetch stock data
-│   ├── simple\_strategy.py       # Rule-based buy signal generator
-│   ├── ml\_model.py              # ML training, prediction
-│   ├── sheets\_logger.py         # Google Sheets logging
-│   ├── telegram\_alert.py        # Buy signal Telegram bot
+│   ├── simple_strategy.py       # Rule-based buy signal generator
+│   ├── ml_model.py              # ML training, prediction
+│   ├── sheets_logger.py         # Google Sheets logging
+│   ├── telegram_alert.py        # Buy signal Telegram bot
 │   ├── indicators.py            # Technical indicators
 │   ├── config.py                # Configuration constants
-│   └── algo\_sheets\_api.json     # Google Sheets API credentials
+│   └── algo_sheets_api.json     # Google Sheets API credentials
 
 ````
 
