@@ -1,8 +1,8 @@
 import gspread
 from oauth2client.service_account import ServiceAccountCredentials
 import pandas as pd
-from ingestion import fetch_data
-from simple_strategy import get_signals_for_tickers  # ✅ Import your strategy results
+from src.ingestion import fetch_data
+from src.simple_strategy import get_signals_for_tickers  
 
 # --- 1. Google Auth ---
 def authenticate_google(json_key_path):

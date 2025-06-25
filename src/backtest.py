@@ -4,7 +4,7 @@ import pandas_ta as ta
 from backtesting import Backtest, Strategy
 from backtesting.test import SMA
 from backtesting.lib import crossover
-from ingestion import fetch_data
+from src.ingestion import fetch_data
 
 # Output folder for logs
 OUTPUT_FOLDER = "trade_logs"
@@ -17,27 +17,34 @@ class MyStrategy(Strategy):
         self.rsi = self.I(ta.rsi, close, length=14)
         self.sma20 = self.I(SMA, close, 20)
         self.sma50 = self.I(SMA, close, 50)
+        self.oversold_flag = False
 
     def next(self):
         if pd.isna(self.rsi[-1]) or pd.isna(self.sma20[-1]) or pd.isna(self.sma50[-1]):
             return
 
-        # Buy condition: RSI < 30 and SMA20 crosses above SMA50
-        if self.rsi[-1] < 30 and crossover(self.sma20, self.sma50):
-            print(f"BUY -> Date: {self.data.index[-1]} | RSI: {self.rsi[-1]:.2f}")
-            self.buy()
+        # Step 1: Monitor RSI condition
+        if self.rsi[-1] < 30:
+            self.oversold_flag = True
+            print(f"⚠️ RSI below 30 at {self.data.index[-1]}")
 
-        # Sell condition: SMA20 crosses below SMA50
+        # Step 2: Buy when crossover happens after RSI < 30
+        if self.oversold_flag and crossover(self.sma20, self.sma50):
+            print(f"✅ BUY at {self.data.index[-1]} | RSI: {self.rsi[-1]:.2f}")
+            self.buy()
+            self.oversold_flag = False  # Reset after buying
+
+        # Step 3: Sell condition
         elif self.position.is_long and crossover(self.sma50, self.sma20):
-            print(f"SELL -> Date: {self.data.index[-1]}")
+            print(f"🔻 SELL at {self.data.index[-1]}")
             self.position.close()
 
 
 def run_and_log(ticker):
     print(f"\n🚀 Running backtest for {ticker}")
-    df = fetch_data(ticker, "2020-01-01", "2025-06-20")
+    df = fetch_data(ticker, "2024-01-01", "2025-06-20")
 
-    # Ensure correct format
+    # Format the DataFrame correctly
     df = df.rename(columns={"Date": "datetime"})
     df = df[["datetime", "Open", "High", "Low", "Close", "Volume"]]
     df["datetime"] = pd.to_datetime(df["datetime"])
@@ -53,7 +60,6 @@ def run_and_log(ticker):
     trades.to_csv(log_path, index=False)
     print(f"✅ Saved trade log: {log_path}")
     return stats, trades
-
 
 
 def main():

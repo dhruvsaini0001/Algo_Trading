@@ -2,7 +2,7 @@
 
 import pandas as pd
 import pandas_ta as ta
-from ingestion import fetch_data
+from src.ingestion import fetch_data
 
 def add_indicators(df):
     """

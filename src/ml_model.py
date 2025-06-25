@@ -1,5 +1,4 @@
-# ml_model.py
-
+import os
 import pandas as pd
 import numpy as np
 import pandas_ta as ta
@@ -10,35 +9,52 @@ from sklearn.metrics import classification_report, accuracy_score
 from sklearn.preprocessing import StandardScaler
 import joblib
 
-from ingestion import fetch_data
+from src.ingestion import fetch_data
+
+# Constants
+MODEL_DIR = "final_model"
+os.makedirs(MODEL_DIR, exist_ok=True)
+
+FEATURE_COLS = ['RSI', 'MACD', 'ATR', 'BBU', 'BBL', 'WILLR', 'RSI_prev', 'MACD_prev']
 
 
 def fetch_and_prepare(ticker):
     df = fetch_data(ticker, start="2024-01-01", end="2025-06-20")
+    if df is None or df.empty:
+        raise ValueError(f"Failed to fetch data for {ticker}")
+
     df.dropna(inplace=True)
 
+    # Technical indicators
     df['RSI'] = ta.rsi(df['Close'], length=14)
     macd = ta.macd(df['Close'])
+    if macd is None or 'MACD_12_26_9' not in macd:
+        raise ValueError("MACD calculation failed.")
+
     df['MACD'] = macd['MACD_12_26_9']
     df['ATR'] = ta.atr(df['High'], df['Low'], df['Close'])
     bb = ta.bbands(df['Close'], length=20)
-    df['BBU'] = bb.iloc[:, 2]
-    df['BBL'] = bb.iloc[:, 0]
+    if bb is not None and bb.shape[1] >= 3:
+        df['BBU'] = bb.iloc[:, 2]
+        df['BBL'] = bb.iloc[:, 0]
+    else:
+        raise ValueError("Bollinger Bands calculation failed.")
+
     df['WILLR'] = ta.willr(df['High'], df['Low'], df['Close'])
 
+    # Lag features
     df['RSI_prev'] = df['RSI'].shift(1)
     df['MACD_prev'] = df['MACD'].shift(1)
-    df.dropna(inplace=True)
 
+    # Target variable
     df['Target'] = (df['Close'].shift(-1) > df['Close']).astype(int)
-    df.dropna(inplace=True)
 
+    df.dropna(inplace=True)
     return df
 
 
-def train_model(df, model_path='src/ml_model.pkl'):
-    feature_cols = ['RSI', 'MACD', 'ATR', 'BBU', 'BBL', 'WILLR', 'RSI_prev', 'MACD_prev']
-    X = df[feature_cols]
+def train_model(df, ticker):
+    X = df[FEATURE_COLS]
     y = df['Target']
 
     scaler = StandardScaler()
@@ -58,35 +74,42 @@ def train_model(df, model_path='src/ml_model.pkl'):
     best_model = clf.best_estimator_
     y_pred = best_model.predict(X_test)
 
-    print("✅ Best Parameters:", clf.best_params_)
-    print("✅ Accuracy:", accuracy_score(y_test, y_pred))
+    print(f"\n📊 {ticker} - Best Parameters: {clf.best_params_}")
+    print(f"✅ Accuracy: {accuracy_score(y_test, y_pred):.4f}")
     print("✅ Report:\n", classification_report(y_test, y_pred))
 
     # Save model and scaler
-    joblib.dump(best_model, model_path)
-    joblib.dump(scaler, 'src/scaler.pkl')
+    joblib.dump(best_model, os.path.join(MODEL_DIR, f"{ticker}_model.pkl"))
+    joblib.dump(scaler, os.path.join(MODEL_DIR, f"{ticker}_scaler.pkl"))
 
-    # Plot feature importance
-    importances = pd.Series(best_model.feature_importances_, index=feature_cols)
+    # Plot feature importances
+    importances = pd.Series(best_model.feature_importances_, index=FEATURE_COLS)
     importances.nlargest(10).plot(kind='barh')
-    plt.title("Top Features")
+    plt.title(f"Top Features - {ticker}")
     plt.tight_layout()
     plt.show()
 
     return best_model, scaler
 
 
-def predict_next_day(df_row, model_path='src/ml_model.pkl'):
+def predict_next_day(df_row, ticker):
+    model_path = os.path.join(MODEL_DIR, f"{ticker}_model.pkl")
+    scaler_path = os.path.join(MODEL_DIR, f"{ticker}_scaler.pkl")
+
+    if not os.path.exists(model_path) or not os.path.exists(scaler_path):
+        raise FileNotFoundError(f"Model or scaler not found for {ticker}. Please train the model first.")
+
     model = joblib.load(model_path)
-    scaler = joblib.load('src/scaler.pkl')
-    features = ['RSI', 'MACD', 'ATR', 'BBU', 'BBL', 'WILLR', 'RSI_prev', 'MACD_prev']
-    X = scaler.transform([df_row[features].values])
+    scaler = joblib.load(scaler_path)
+
+    X = scaler.transform([df_row[FEATURE_COLS].values])
     pred = model.predict(X)[0]
     prob = model.predict_proba(X)[0][1]  # Probability of class 1 (buy)
+
     return pred, prob
 
-def predict_next_signal(ticker, model_path='src/ml_model.pkl'):
+
+def predict_next_signal(ticker):
     df = fetch_and_prepare(ticker)
     latest_row = df.iloc[-1]
-    return predict_next_day(latest_row, model_path)
-
+    return predict_next_day(latest_row, ticker)

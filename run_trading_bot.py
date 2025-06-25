@@ -10,10 +10,6 @@ from backtesting.test import SMA
 from backtesting.lib import crossover
 
 
-# Add 'src' folder to sys.path
-
-
-
 from src.ingestion import fetch_data
 from src.simple_strategy import get_signals_for_tickers
 from src.sheets_logger import log_to_named_sheet
@@ -147,7 +143,7 @@ def main():
     for ticker in tickers:
         print(f"\n🔍 Training ML model for {ticker}...")
         df = fetch_and_prepare(ticker)
-        train_model(df)
+        train_model(df, ticker)
 
     # --- 6.1 Predict Next Signal ---
     for ticker in tickers:
@@ -155,7 +151,7 @@ def main():
         try:
             pred, prob = predict_next_signal(ticker)
             signal_type = "📈 BUY" if pred == 1 else "📉 SELL/HOLD"
-            print(f"🔮 Prediction for {ticker}: {signal_type} (Confidence: {round(prob, 2)}%)")
+            print(f"🔮 Prediction for {ticker}: {signal_type} (Confidence: {round(prob*100, 2)}%)")
         except Exception as e:
             print(f"❌ Prediction failed for {ticker}: {e}")
 
