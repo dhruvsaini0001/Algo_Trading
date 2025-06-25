@@ -58,7 +58,7 @@ def get_signals_for_tickers(tickers, start_date, end_date, rsi_threshold=30):
 # --- Optional CLI Test ---
 if __name__ == "__main__":
     tickers = ["RELIANCE.NS", "TCS.NS", "INFY.NS"]
-    df = get_signals_for_tickers(tickers, "2022-01-01", "2025-06-24", rsi_threshold=30)
+    df = get_signals_for_tickers(tickers, "2024-01-01", "2025-06-24", rsi_threshold=30)
 
     print("\n✅ Final Buy Signals:")
     signal_df = df[df["signal"] == 1].copy()

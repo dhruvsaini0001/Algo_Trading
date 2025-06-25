@@ -1,3 +1,5 @@
+# app.py
+
 import os
 import sys
 import streamlit as st
@@ -9,16 +11,21 @@ BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 SRC_DIR = os.path.join(BASE_DIR, 'src')
 sys.path.append(SRC_DIR)
 
-from backtest import run_and_log
-from ingestion import fetch_data
-from simple_strategy import get_signals_for_tickers
-from ml_model import fetch_and_prepare, train_model, predict_next_signal
+from src.backtest import run_and_log
+from src.ingestion import fetch_data
+from src.simple_strategy import get_signals_for_tickers
+from src.ml_model import fetch_and_prepare, train_model, predict_next_signal
+from src.sheets_logger import upload_all_to_sheets  # <-- Google Sheets integration
 
 st.set_page_config(page_title="Algo Trading Dashboard", layout="wide")
 st.title("📈 Algo-Trading System with ML & Automation")
 
+# Configuration
 tickers = ["RELIANCE.NS", "TCS.NS", "INFY.NS"]
 selected_ticker = st.selectbox("Select a stock to analyze", tickers)
+start_date = "2024-01-01"
+end_date = "2025-06-24"
+json_path = "algo_sheets_api.json"  # Replace with your actual file path
 
 # --- Backtesting ---
 if st.button("📉 Run Backtest"):
@@ -38,17 +45,18 @@ if st.button("📉 Run Backtest"):
 
 # --- ML Model Training ---
 if st.button("🧠 Train ML Model"):
-    df = fetch_and_prepare(selected_ticker)
-    with st.spinner(f"Training ML model for {selected_ticker}..."):
-        train_model(df)
+    with st.spinner(f"Fetching data and training ML model for {selected_ticker}..."):
+        df = fetch_and_prepare(selected_ticker)
+        train_model(df, selected_ticker)
         st.success("✅ ML model trained and saved successfully!")
 
 # --- Buy Signal Detection ---
 if st.button("🔍 Show Buy Signals"):
     with st.spinner("Fetching buy signals..."):
-        signal_df = get_signals_for_tickers([selected_ticker], "2022-01-01", "2025-06-24")
+        signal_df = get_signals_for_tickers([selected_ticker], start_date, end_date)
         buy_signals = signal_df[signal_df["signal"] == 1]
         if not buy_signals.empty:
+            st.subheader("📈 Buy Signals Detected")
             st.dataframe(buy_signals[["Date", "Close", "RSI", "SMA20", "SMA50"]])
         else:
             st.warning("⚠️ No buy signals found.")
@@ -65,3 +73,12 @@ if st.button("📡 Predict Next Signal using ML"):
         st.error("❌ Model or Scaler not found. Please train the model first.")
     except Exception as e:
         st.error(f"❌ Prediction failed: {str(e)}")
+
+# --- Upload to Google Sheets ---
+if st.button("📤 Upload All Data to Google Sheets"):
+    with st.spinner("Uploading data to Google Sheets..."):
+        try:
+            upload_all_to_sheets(tickers, start_date, end_date, json_path)
+            st.success("✅ Data uploaded to Google Sheets successfully!")
+        except Exception as e:
+            st.error(f"❌ Upload failed: {str(e)}")
