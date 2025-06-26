@@ -24,7 +24,7 @@ A Python-based modular algorithmic trading system that:
 ### 🧠 ML Module
 - Features: RSI, MACD, ATR, Bollinger Bands, Williams %R
 - Model: Decision Tree with GridSearchCV
-- Predicts whether stock will go up next day
+- Predicts Next Day Movement Of Stocks
 - Trained model saved under `final_model/`
 
 ### 📈 Streamlit Dashboard
