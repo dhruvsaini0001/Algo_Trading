@@ -69,7 +69,7 @@ class MyStrategy(Strategy):
 
 
 def run_backtest(ticker):
-    print(f"\n📉 Backtesting {ticker}")
+    print(f"\n Backtesting {ticker}")
     df = fetch_data(ticker, "2020-01-01", "2025-06-24")
 
     df = df.rename(columns={"Date": "datetime"})
@@ -79,12 +79,12 @@ def run_backtest(ticker):
 
     bt = Backtest(df, MyStrategy, cash=10000, commission=0.002, exclusive_orders=True)
     stats = bt.run()
-    print(f"\n📊 {ticker} Backtest Summary:\n{stats}")
+    print(f"\n {ticker} Backtest Summary:\n{stats}")
 
     trades = stats._trades
     trade_log_path = os.path.join(BACKTEST_LOG_DIR, f"{ticker}_trade_log.csv")
     trades.to_csv(trade_log_path, index=False)
-    print(f"✅ Trade log saved to: {trade_log_path}")
+    print(f" Trade log saved to: {trade_log_path}")
 
 
 def main():
@@ -143,19 +143,19 @@ def main():
         print("⚠️ No Buy Signals found to log.")
     # --- 6. Train ML Models ---
     for ticker in tickers:
-        print(f"\n🔍 Training ML model for {ticker}...")
+        print(f"\n Training ML model for {ticker}...")
         df = fetch_and_prepare(ticker)
         train_model(df, ticker)
 
     # --- 6.1 Predict Next Signal ---
     for ticker in tickers:
-        print(f"\n🧠 Predicting next signal for {ticker} using ML model...")
+        print(f"\n Predicting next signal for {ticker} using ML model...")
         try:
             pred, prob = predict_next_signal(ticker)
             signal_type = "📈 BUY" if pred == 1 else "📉 SELL/HOLD"
-            print(f"🔮 Prediction for {ticker}: {signal_type} (Confidence: {round(prob*100, 2)}%)")
+            print(f" Prediction for {ticker}: {signal_type} (Confidence: {round(prob*100, 2)}%)")
         except Exception as e:
-            print(f"❌ Prediction failed for {ticker}: {e}")
+            print(f" Prediction failed for {ticker}: {e}")
 
 
     # --- 7. Run Backtests ---

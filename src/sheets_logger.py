@@ -36,7 +36,7 @@ def log_to_named_sheet(sheet_name, worksheet_name, df, json_key_path):
     worksheet.insert_row(df.columns.tolist(), index=1)
     worksheet.insert_rows(df.values.tolist(), row=2)
 
-    print(f"✅ Logged data to {worksheet_name} in Google Sheet: {sheet_name}")
+    print(f" Logged data to {worksheet_name} in Google Sheet: {sheet_name}")
 
 # --- 3. Main Execution ---
 if __name__ == "__main__":
@@ -84,7 +84,7 @@ if __name__ == "__main__":
     summary_df = pd.DataFrame(summary_list)
     log_to_named_sheet(sheet_name, "Summary", summary_df, json_path)
 
-    # 📈 Strategy Signals (RSI + MA Crossover)
+    # Strategy Signals (RSI + MA Crossover)
     signal_df = get_signals_for_tickers(tickers, start_date, end_date)
     signal_df = signal_df[signal_df["signal"] == 1]  # Filter only buy signals
 

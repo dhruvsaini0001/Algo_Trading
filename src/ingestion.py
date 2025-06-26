@@ -27,7 +27,7 @@ def fetch_data(tickers, start, end, interval="1d"):
                 # Fallback: single-ticker format
                 data = df[['Open', 'High', 'Low', 'Close', 'Volume']].copy()
             except:
-                print(f"⚠️ No valid data for {ticker}, filling empty frame.")
+                print(f" No valid data for {ticker}, filling empty frame.")
                 data = pd.DataFrame(columns=['Open', 'High', 'Low', 'Close', 'Volume'])
 
         data['Ticker'] = ticker

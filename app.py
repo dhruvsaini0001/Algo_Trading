@@ -15,7 +15,6 @@ from src.backtest import run_and_log
 from src.ingestion import fetch_data
 from src.simple_strategy import get_signals_for_tickers
 from src.ml_model import fetch_and_prepare, train_model, predict_next_signal
-from src.sheets_logger import upload_all_to_sheets  # <-- Google Sheets integration
 
 st.set_page_config(page_title="Algo Trading Dashboard", layout="wide")
 st.title("📈 Algo-Trading System with ML & Automation")
@@ -56,29 +55,21 @@ if st.button("🔍 Show Buy Signals"):
         signal_df = get_signals_for_tickers([selected_ticker], start_date, end_date)
         buy_signals = signal_df[signal_df["signal"] == 1]
         if not buy_signals.empty:
-            st.subheader("📈 Buy Signals Detected")
+            st.subheader(" Buy Signals Detected")
             st.dataframe(buy_signals[["Date", "Close", "RSI", "SMA20", "SMA50"]])
         else:
-            st.warning("⚠️ No buy signals found.")
+            st.warning(" No buy signals found.")
 
 # --- Predict Next Signal ---
 if st.button("📡 Predict Next Signal using ML"):
     try:
         signal, prob = predict_next_signal(selected_ticker)
         if signal == 1:
-            st.success(f"📈 Prediction: BUY Signal ({prob*100:.2f}% confidence)")
+            st.success(f" Prediction: BUY Signal ({prob*100:.2f}% confidence)")
         else:
-            st.warning(f"📉 Prediction: SELL / HOLD Signal ({prob*100:.2f}% confidence)")
+            st.warning(f" Prediction: SELL / HOLD Signal ({prob*100:.2f}% confidence)")
     except FileNotFoundError:
-        st.error("❌ Model or Scaler not found. Please train the model first.")
+        st.error(" Model or Scaler not found. Please train the model first.")
     except Exception as e:
-        st.error(f"❌ Prediction failed: {str(e)}")
+        st.error(f" Prediction failed: {str(e)}")
 
-# --- Upload to Google Sheets ---
-if st.button("📤 Upload All Data to Google Sheets"):
-    with st.spinner("Uploading data to Google Sheets..."):
-        try:
-            upload_all_to_sheets(tickers, start_date, end_date, json_path)
-            st.success("✅ Data uploaded to Google Sheets successfully!")
-        except Exception as e:
-            st.error(f"❌ Upload failed: {str(e)}")

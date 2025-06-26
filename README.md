@@ -38,31 +38,23 @@ A Python-based modular algorithmic trading system that:
 - Summary sheet (profit, win ratio, etc.)
 - Buy signal sheet
 
-### 🔔 Telegram Alerts
-- Instant alerts when a buy signal is triggered
-- Configured using BotFather and your chat ID
-
----
 
 ## 📁 Project Structure
 
 ```.
-├── app.py                        # Streamlit UI
-├── run_trading_bot.py           # Main script (scheduler, automation)
-├── requirements.txt             # Dependencies
-├── README.md                    # Project documentation
 ├── trade_logs/                  # CSV logs of backtests
 ├── final_model/                 # Trained ML models and scalers
 ├── src/
-│   ├── backtest.py              # RSI + SMA backtesting logic
 │   ├── ingestion.py             # Fetch stock data
 │   ├── simple_strategy.py       # Rule-based buy signal generator
+│   ├── backtest.py              # RSI + SMA backtesting logic
 │   ├── ml_model.py              # ML training, prediction
 │   ├── sheets_logger.py         # Google Sheets logging
-│   ├── telegram_alert.py        # Buy signal Telegram bot
-│   ├── indicators.py            # Technical indicators
-│   ├── config.py                # Configuration constants
 │   └── algo_sheets_api.json     # Google Sheets API credentials
+├── run_trading_bot.py           # Main script (scheduler, automation)
+├── app.py                       # Streamlit UI
+├── requirements.txt             # Dependencies
+├── README.md                    # Project documentation
 
 ````
 

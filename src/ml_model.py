@@ -19,7 +19,7 @@ FEATURE_COLS = ['RSI', 'MACD', 'ATR', 'BBU', 'BBL', 'WILLR', 'RSI_prev', 'MACD_p
 
 
 def fetch_and_prepare(ticker):
-    df = fetch_data(ticker, start="2024-01-01", end="2025-06-20")
+    df = fetch_data(ticker, start="2023-01-01", end="2025-06-20")
     if df is None or df.empty:
         raise ValueError(f"Failed to fetch data for {ticker}")
 
@@ -82,12 +82,12 @@ def train_model(df, ticker):
     joblib.dump(best_model, os.path.join(MODEL_DIR, f"{ticker}_model.pkl"))
     joblib.dump(scaler, os.path.join(MODEL_DIR, f"{ticker}_scaler.pkl"))
 
-    # Plot feature importances
-    importances = pd.Series(best_model.feature_importances_, index=FEATURE_COLS)
-    importances.nlargest(10).plot(kind='barh')
-    plt.title(f"Top Features - {ticker}")
-    plt.tight_layout()
-    plt.show()
+    # # Plot feature importances
+    # importances = pd.Series(best_model.feature_importances_, index=FEATURE_COLS)
+    # importances.nlargest(10).plot(kind='barh')
+    # plt.title(f"Top Features - {ticker}")
+    # plt.tight_layout()
+    # plt.show()
 
     return best_model, scaler
 

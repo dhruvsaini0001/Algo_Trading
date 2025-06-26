@@ -26,7 +26,7 @@ class MyStrategy(Strategy):
         # Step 1: Monitor RSI condition
         if self.rsi[-1] < 30:
             self.oversold_flag = True
-            print(f"⚠️ RSI below 30 at {self.data.index[-1]}")
+            print(f" RSI below 30 at {self.data.index[-1]}")
 
         # Step 2: Buy when crossover happens after RSI < 30
         if self.oversold_flag and crossover(self.sma20, self.sma50):
@@ -41,7 +41,7 @@ class MyStrategy(Strategy):
 
 
 def run_and_log(ticker):
-    print(f"\n🚀 Running backtest for {ticker}")
+    print(f"\n Running backtest for {ticker}")
     df = fetch_data(ticker, "2024-01-01", "2025-06-20")
 
     # Format the DataFrame correctly
@@ -52,13 +52,13 @@ def run_and_log(ticker):
 
     bt = Backtest(df, MyStrategy, cash=10000, commission=0.002, exclusive_orders=True)
     stats = bt.run()
-    print(f"\n📊 {ticker} Performance Summary:\n{stats}")
+    print(f"\n {ticker} Performance Summary:\n{stats}")
 
     # Save trade log
     trades = stats._trades
     log_path = os.path.join(OUTPUT_FOLDER, f"{ticker}_trade_log.csv")
     trades.to_csv(log_path, index=False)
-    print(f"✅ Saved trade log: {log_path}")
+    print(f" Saved trade log: {log_path}")
     return stats, trades
 
 
